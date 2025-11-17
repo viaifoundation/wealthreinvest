@@ -42,14 +42,14 @@ def get_current_price(ticker, source='yfinance'):
         open_price = info.get('regularMarketOpen', 0)
         pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
         sign = '+' if pct_change > 0 else '-'
-        pre_market = info.get('preMarketPrice')
-        after_market = info.get('postMarketPrice')
+        pre_market = info.get('preMarketPrice', 0)
+        after_market = info.get('postMarketPrice', 0)
         print(f"Ticker: {ticker}")
-        print(f"Current/Regular Market Price: {current} ({sign}{abs(pct_change):.2f}% from open)")
+        print(f"Current/Regular Market Price: {current:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
         if pre_market:
-            print(f"Pre-Market Price: {pre_market}")
+            print(f"Pre-Market Price: {pre_market:10.2f}")
         if after_market:
-            print(f"After-Market Price: {after_market}")
+            print(f"After-Market Price: {after_market:10.2f}")
     elif source == 'massive' and MassiveClient:
         client = MassiveClient(api_key=os.getenv('MASSIVE_API_KEY'))
         # Free tier lacks real-time; use last daily close
@@ -60,7 +60,7 @@ def get_current_price(ticker, source='yfinance'):
             pct_change = ((agg.close - agg.open) / agg.open * 100) if agg.open != 0 else 0
             sign = '+' if pct_change > 0 else '-'
             print(f"Ticker: {ticker}")
-            print(f"Last Close (EOD, no real-time): {agg.close} ({sign}{abs(pct_change):.2f}% from open)")
+            print(f"Last Close (EOD, no real-time): {agg.close:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
         else:
             print(f"No data for {ticker}")
     elif source == 'finnhub' and finnhub:
@@ -71,10 +71,10 @@ def get_current_price(ticker, source='yfinance'):
         pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
         sign = '+' if pct_change > 0 else '-'
         print(f"Ticker: {ticker}")
-        print(f"Current Price: {current} ({sign}{abs(pct_change):.2f}% from open)")
-        print(f"Open: {open_price}")
-        print(f"High: {quote['h']}")
-        print(f"Low: {quote['l']}")
+        print(f"Current Price: {current:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
+        print(f"Open: {open_price:10.2f}")
+        print(f"High: {quote['h']:10.2f}")
+        print(f"Low: {quote['l']:10.2f}")
         # Finnhub free has real-time, but no explicit off-hours separation
     elif source == 'twelvedata' and TDClient:
         client = TDClient(apikey=os.getenv('TWELVEDATA_API_KEY'))
@@ -87,10 +87,10 @@ def get_current_price(ticker, source='yfinance'):
             pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
             sign = '+' if pct_change > 0 else '-'
             print(f"Ticker: {ticker}")
-            print(f"Current Price: {current} ({sign}{abs(pct_change):.2f}% from open)")
-            print(f"Open: {open_price}")
-            print(f"High: {latest['high']}")
-            print(f"Low: {latest['low']}")
+            print(f"Current Price: {current:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
+            print(f"Open: {open_price:10.2f}")
+            print(f"High: {latest['high']:10.2f}")
+            print(f"Low: {latest['low']:10.2f}")
             # Supports real-time/off-hours in latest bar
     else:
         print(f"Source '{source}' not available or library not installed.")
