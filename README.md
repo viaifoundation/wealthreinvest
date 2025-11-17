@@ -4,15 +4,15 @@ A Python-based tool for researching stock options, retrieving market data, and s
 
 ## Overview
 
-This repository contains scripts to fetch current stock price data (including off-hours/pre/after-market where available) from multiple sources and generate intraday histograms. It's designed for programmatic analysis to aid in smart investing and long-term wealth growth.
+This repository contains scripts to fetch current stock price data (including off-hours/pre/after-market where available) from multiple sources, generate text-based K-lines (candlesticks) for intraday and historical analysis. It's designed for programmatic analysis to aid in smart investing and long-term wealth growth.
 
 ## Features
 - Fetch current/regular market price, with pre/after-market where supported.
-- Supports multiple sources: yfinance (default, no key), massive, finnhub, twelvedata.
-- Generate histograms of close prices for 5,10,15,20,30,60-minute intervals over the last 8 hours (using yfinance).
-- Print additional current data: open, high, low, 52wk high/low, off-hours prices.
-- Customizable via command-line parameters (ticker and source for price retriever).
-- Help function for usage (--help or -h) in both scripts.
+- Supports multiple sources for prices: yfinance (default, no key), massive, finnhub, twelvedata.
+- Generate text-based K-lines for daily intervals (from market open to now) with time in PT/ET.
+- Generate historical K-lines over days (last 11 bars).
+- Customizable via command-line parameters (ticker, step interval, start time).
+- Help function for usage (--help or -h) in all scripts.
 
 ## Setup
 1. **Clone the repo**: git clone git@github.com:wealthreinvest/wealthreinvest.git
@@ -23,8 +23,9 @@ This repository contains scripts to fetch current stock price data (including of
    - For twelvedata: export TWELVEDATA_API_KEY=your_key_here
    (Use a .env file if preferred).
 4. **Run scripts**:
-   - Price retriever: python stock_data_retriever.py [TICKER] [SOURCE] (e.g., python stock_data_retriever.py AAPL finnhub). Defaults: GOOGL and yfinance.
-   - Histogram: python intraday_histogram.py [TICKER] (e.g., python intraday_histogram.py AAPL). Default: GOOGL.
+   - Price: python price.py [TICKER] [SOURCE] (e.g., python price.py AAPL finnhub). Defaults: NVDA and yfinance.
+   - Daily K-lines: python daily.py [TICKER] [STEP] [START_TIME] (e.g., python daily.py AAPL 15 1000). Defaults: NVDA, 5 min, 0930.
+   - Historical K-lines: python history.py [TICKER] [STEP] (e.g., python history.py AAPL 15). Defaults: NVDA, 1 day.
 
 ## Requirements
 - Python 3.10+
@@ -32,13 +33,16 @@ This repository contains scripts to fetch current stock price data (including of
 
 ## Usage Examples
 Run in your terminal:  
-python stock_data_retriever.py GOOGL yfinance  
+python price.py NVDA yfinance  
 This outputs current price data.  
 
-python intraday_histogram.py GOOGL  
-This outputs histograms and current data.  
+python daily.py NVDA 15  
+This outputs daily K-lines.  
 
-For help: Add --help or -h to either script.
+python history.py NVDA 5  
+This outputs historical K-lines.  
+
+For help: Add --help or -h to any script.
 
 ## Contributing
 Feel free to fork and submit pull requests. Focus on adding more analysis features or option strategies.
