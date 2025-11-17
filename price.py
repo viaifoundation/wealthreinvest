@@ -2,6 +2,7 @@ import datetime
 import sys
 import os
 import requests  # For manual API calls if needed
+import numpy as np  # for robust numeric checks
 
 try:
     from massive import RESTClient as MassiveClient
@@ -34,22 +35,41 @@ def show_help():
     print("  - yfinance: No key needed")
     sys.exit(0)
 
+def _is_num(v):
+    """Return True if v is a real number and not NaN."""
+    return isinstance(v, (int, float, np.floating)) and v == v  # v == v filters out NaN
+
+def _fmt_price(v):
+    """Format a value as 10.2f if numeric, otherwise right-aligned 'N/A'."""
+    return f"{v:10.2f}" if _is_num(v) else f"{'N/A':>10}"
+
 def get_current_price(ticker, source='yfinance'):
     if source == 'yfinance' and yf:
         stock = yf.Ticker(ticker)
         info = stock.info
-        current = info.get('currentPrice') or info.get('regularMarketPrice', 0)
-        open_price = info.get('regularMarketOpen', 0)
-        pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
-        sign = '+' if pct_change > 0 else '-'
-        pre_market = info.get('preMarketPrice', 0)
-        after_market = info.get('postMarketPrice', 0)
+
+        # Current price fallback chain
+        current = info.get('currentPrice')
+        if not _is_num(current):
+            current = info.get('regularMarketPrice')
+
+        open_price = info.get('regularMarketOpen')
+        if not _is_num(open_price):
+            open_price = None
+
+        pct_change = 0.0
+        if _is_num(current) and _is_num(open_price) and open_price != 0:
+            pct_change = (current - open_price) / open_price * 100.0
+        sign = '+' if pct_change >= 0 else '-'
+
+        pre_market = info.get('preMarketPrice')
+        after_market = info.get('postMarketPrice')
+
         print(f"Ticker: {ticker}")
-        print(f"Current/Regular Market Price: {current:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
-        if pre_market:
-            print(f"Pre-Market Price: {pre_market:10.2f}")
-        if after_market:
-            print(f"After-Market Price: {after_market:10.2f}")
+        print(f"Current/Regular Market Price: {_fmt_price(current)} ({sign}{abs(pct_change):5.2f}% from open)")
+        print(f"Pre-Market Price: {_fmt_price(pre_market)}")
+        print(f"After-Market Price: {_fmt_price(after_market)}")
+
     elif source == 'massive' and MassiveClient:
         client = MassiveClient(api_key=os.getenv('MASSIVE_API_KEY'))
         # Free tier lacks real-time; use last daily close
@@ -57,41 +77,56 @@ def get_current_price(ticker, source='yfinance'):
         aggs = client.get_aggs(ticker, 1, 'day', today, today)
         if aggs:
             agg = aggs[0]
-            pct_change = ((agg.close - agg.open) / agg.open * 100) if agg.open != 0 else 0
-            sign = '+' if pct_change > 0 else '-'
+            open_price = agg.open
+            close_price = agg.close
+            pct_change = ((close_price - open_price) / open_price * 100) if open_price != 0 else 0
+            sign = '+' if pct_change >= 0 else '-'
             print(f"Ticker: {ticker}")
-            print(f"Last Close (EOD, no real-time): {agg.close:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
+            print(f"Last Close (EOD, no real-time): {close_price:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
         else:
             print(f"No data for {ticker}")
+
     elif source == 'finnhub' and finnhub:
         client = finnhub.Client(api_key=os.getenv('FINNHUB_API_KEY'))
         quote = client.quote(ticker)
-        current = quote['c']
-        open_price = quote['o']
+        current = quote.get('c', 0.0)
+        open_price = quote.get('o', 0.0)
         pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
-        sign = '+' if pct_change > 0 else '-'
+        sign = '+' if pct_change >= 0 else '-'
         print(f"Ticker: {ticker}")
         print(f"Current Price: {current:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
         print(f"Open: {open_price:10.2f}")
-        print(f"High: {quote['h']:10.2f}")
-        print(f"Low: {quote['l']:10.2f}")
+        print(f"High: {quote.get('h', 0.0):10.2f}")
+        print(f"Low: {quote.get('l', 0.0):10.2f}")
         # Finnhub free has real-time, but no explicit off-hours separation
+
     elif source == 'twelvedata' and TDClient:
         client = TDClient(apikey=os.getenv('TWELVEDATA_API_KEY'))
         ts = client.time_series(symbol=ticker, interval="1min", outputsize=1)
         data = ts.as_json()
         if data:
             latest = data[0]
-            current = latest['close']
-            open_price = latest['open']
+            # TwelveData returns strings – cast to float
+            try:
+                current = float(latest['close'])
+                open_price = float(latest['open'])
+                high = float(latest['high'])
+                low = float(latest['low'])
+            except (KeyError, ValueError, TypeError):
+                print(f"Could not parse TwelveData response for {ticker}")
+                return
+
             pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
-            sign = '+' if pct_change > 0 else '-'
+            sign = '+' if pct_change >= 0 else '-'
             print(f"Ticker: {ticker}")
             print(f"Current Price: {current:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
             print(f"Open: {open_price:10.2f}")
-            print(f"High: {latest['high']:10.2f}")
-            print(f"Low: {latest['low']:10.2f}")
+            print(f"High: {high:10.2f}")
+            print(f"Low: {low:10.2f}")
             # Supports real-time/off-hours in latest bar
+        else:
+            print(f"No data from TwelveData for {ticker}")
+
     else:
         print(f"Source '{source}' not available or library not installed.")
 

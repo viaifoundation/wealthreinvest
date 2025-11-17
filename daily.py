@@ -16,6 +16,17 @@ def show_help():
     print("  python daily.py AAPL 15 1000")
     sys.exit(0)
 
+def fmt_price_field(info, key):
+    """
+    Safely format a numeric field from yfinance .info as a 10.2f string.
+    If the value is missing or non-numeric, return a right-aligned 'N/A'.
+    """
+    v = info.get(key, None)
+    if isinstance(v, (int, float, np.floating)) and v == v:  # v == v filters out NaN
+        return f"{v:10.2f}"
+    else:
+        return f"{'N/A':>10}"
+
 def generate_klines(ticker='NVDA', step=5, start_time_str='0930'):
     # Parse start time
     try:
@@ -34,7 +45,7 @@ def generate_klines(ticker='NVDA', step=5, start_time_str='0930'):
         print("No data available.")
         return
     
-    # Filter from start time to now
+    # Filter from start time to now (assume UTC in index)
     today = datetime.date.today()
     start_datetime = datetime.datetime.combine(today, start_time).replace(tzinfo=datetime.timezone.utc)
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -73,19 +84,30 @@ def generate_klines(ticker='NVDA', step=5, start_time_str='0930'):
     now_et = datetime.datetime.now(pytz.timezone('US/Eastern')).strftime("%H:%M ET")
     print(f"\nCurrent Data as of {now_pt} ({now_et}) (Close Prices Summary):")
     info = stock.info
+
+    # Current & change from open, robust to missing/non-numeric
     current = info.get('currentPrice', info.get('regularMarketPrice', 0))
-    open_price = info.get('regularMarketOpen', 0)
-    pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
+    open_price = info.get('regularMarketOpen', 0) or 0
+
+    if isinstance(current, (int, float, np.floating)) and isinstance(open_price, (int, float, np.floating)) and open_price != 0:
+        pct_change = (current - open_price) / open_price * 100
+    else:
+        pct_change = 0
     sign = '+' if pct_change > 0 else '-'
-    print(f"Previous Close: {info.get('previousClose', 'N/A'):10.2f}")
-    print(f"Open: {info.get('regularMarketOpen', 'N/A'):10.2f}")
-    print(f"High: {info.get('regularMarketDayHigh', 'N/A'):10.2f}")
-    print(f"Low: {info.get('regularMarketDayLow', 'N/A'):10.2f}")
-    print(f"Current/Regular Market Price: {current:10.2f} ({sign}{abs(pct_change):5.2f}% from open)")
-    print(f"52wk High: {info.get('fiftyTwoWeekHigh', 'N/A'):10.2f}")
-    print(f"52wk Low: {info.get('fiftyTwoWeekLow', 'N/A'):10.2f}")
-    print(f"Pre-Market Price: {info.get('preMarketPrice', 'N/A'):10.2f}")
-    print(f"After-Market Price: {info.get('postMarketPrice', 'N/A'):10.2f}")
+    if isinstance(current, (int, float, np.floating)) and current == current:
+        current_str = f"{current:10.2f}"
+    else:
+        current_str = f"{'N/A':>10}"
+
+    print(f"Previous Close: {fmt_price_field(info, 'previousClose')}")
+    print(f"Open: {fmt_price_field(info, 'regularMarketOpen')}")
+    print(f"High: {fmt_price_field(info, 'regularMarketDayHigh')}")
+    print(f"Low: {fmt_price_field(info, 'regularMarketDayLow')}")
+    print(f"Current/Regular Market Price: {current_str} ({sign}{abs(pct_change):5.2f}% from open)")
+    print(f"52wk High: {fmt_price_field(info, 'fiftyTwoWeekHigh')}")
+    print(f"52wk Low: {fmt_price_field(info, 'fiftyTwoWeekLow')}")
+    print(f"Pre-Market Price: {fmt_price_field(info, 'preMarketPrice')}")
+    print(f"After-Market Price: {fmt_price_field(info, 'postMarketPrice')}")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
