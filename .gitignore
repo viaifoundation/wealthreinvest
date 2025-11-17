@@ -1,0 +1,38 @@
+
+#### .gitignore
+```gitignore
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+*.env
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Misc
+*.bak
+*.tmp
+temp/
