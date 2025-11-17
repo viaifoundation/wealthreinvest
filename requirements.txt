@@ -2,3 +2,8 @@ massive  # For Massive (optional)
 finnhub-python  # For Finnhub (optional)
 twelvedata  # For Twelve Data (optional)
 yfinance  # Default, free
+massive  # For Massive (optional)
+finnhub-python  # For Finnhub (optional)
+twelvedata  # For Twelve Data (optional)
+yfinance  # Default, free
+numpy

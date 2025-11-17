@@ -21,12 +21,12 @@ except ImportError:
     yf = None
 
 def show_help():
-    print("Usage: python stock_data_retriever.py [TICKER] [SOURCE]")
-    print("  - TICKER: Stock ticker symbol (default: GOOGL)")
+    print("Usage: python price.py [TICKER] [SOURCE]")
+    print("  - TICKER: Stock ticker symbol (default: NVDA)")
     print("  - SOURCE: Data source (default: yfinance). Options: yfinance, massive, finnhub, twelvedata")
     print("Examples:")
-    print("  python stock_data_retriever.py GOOGL")
-    print("  python stock_data_retriever.py AAPL finnhub")
+    print("  python price.py NVDA")
+    print("  python price.py AAPL finnhub")
     print("Requirements:")
     print("  - For massive: Set MASSIVE_API_KEY env var")
     print("  - For finnhub: Set FINNHUB_API_KEY env var")
@@ -85,8 +85,6 @@ def get_current_price(ticker, source='yfinance'):
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
         show_help()
-    ticker = sys.argv[1] if len(sys.argv) > 1 else 'GOOGL'
+    ticker = sys.argv[1] if len(sys.argv) > 1 else 'NVDA'
     source = sys.argv[2] if len(sys.argv) > 2 else 'yfinance'
-    if len(sys.argv) == 1:
-        show_help()
     get_current_price(ticker, source)
