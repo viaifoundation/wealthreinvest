@@ -42,8 +42,10 @@ def generate_klines(ticker='NVDA', step=1):
         high = row['High']
         start = row['Open']
         end = row['Close']
+        pct_change = ((end - start) / start * 100) if start != 0 else 0
+        sign = '+' if pct_change > 0 else '-'
         direction = '↑' if end > start else '↓'
-        body = f"[{start:.2f} {direction} {end:.2f}]"
+        body = f"[{start:.2f} {direction} {end:.2f}] ({sign}{abs(pct_change):.2f}%)"
         print(f"{dt}: {low:.2f} | {body} | {high:.2f}")
     
     # Additional current data with current date/time
@@ -51,10 +53,15 @@ def generate_klines(ticker='NVDA', step=1):
     now_et = datetime.datetime.now(pytz.timezone('US/Eastern')).strftime("%H:%M ET")
     print(f"\nCurrent Data as of {now_pt} ({now_et}) (Close Prices Summary):")
     info = stock.info
+    current = info.get('currentPrice', info.get('regularMarketPrice', 0))
+    open_price = info.get('regularMarketOpen', 0)
+    pct_change = ((current - open_price) / open_price * 100) if open_price != 0 else 0
+    sign = '+' if pct_change > 0 else '-'
     print(f"Previous Close: {info.get('previousClose', 'N/A')}")
     print(f"Open: {info.get('regularMarketOpen', 'N/A')}")
     print(f"High: {info.get('regularMarketDayHigh', 'N/A')}")
     print(f"Low: {info.get('regularMarketDayLow', 'N/A')}")
+    print(f"Current/Regular Market Price: {current} ({sign}{abs(pct_change):.2f}% from open)")
     print(f"52wk High: {info.get('fiftyTwoWeekHigh', 'N/A')}")
     print(f"52wk Low: {info.get('fiftyTwoWeekLow', 'N/A')}")
     print(f"Pre-Market Price: {info.get('preMarketPrice', 'N/A')}")
