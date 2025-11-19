@@ -64,11 +64,26 @@ def get_current_price(ticker, source='yfinance'):
 
         pre_market = info.get('preMarketPrice')
         after_market = info.get('postMarketPrice')
+        previous_close = info.get('previousClose')
+
+        regular_market_price = info.get('regularMarketPrice')
 
         print(f"Ticker: {ticker}")
         print(f"Current/Regular Market Price: {_fmt_price(current)} ({sign}{abs(pct_change):5.2f}% from open)")
-        print(f"Pre-Market Price: {_fmt_price(pre_market)}")
-        print(f"After-Market Price: {_fmt_price(after_market)}")
+
+        pre_market_str = _fmt_price(pre_market)
+        if _is_num(pre_market) and _is_num(previous_close) and previous_close != 0:
+            pre_market_pct = (pre_market - previous_close) / previous_close * 100
+            sign_pre = '+' if pre_market_pct >= 0 else '-'
+            pre_market_str = f"{pre_market_str} ({sign_pre}{abs(pre_market_pct):.2f}%)"
+        print(f"Pre-Market Price: {pre_market_str}")
+
+        after_market_str = _fmt_price(after_market)
+        if _is_num(after_market) and _is_num(regular_market_price) and regular_market_price != 0:
+            after_market_pct = (after_market - regular_market_price) / regular_market_price * 100
+            sign_after = '+' if after_market_pct >= 0 else '-'
+            after_market_str = f"{after_market_str} ({sign_after}{abs(after_market_pct):.2f}%)"
+        print(f"After-Market Price: {after_market_str}")
 
     elif source == 'massive' and MassiveClient:
         client = MassiveClient(api_key=os.getenv('MASSIVE_API_KEY'))

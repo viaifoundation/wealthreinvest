@@ -13,7 +13,6 @@ def show_help():
     print("Also prints current data including open, high, low, 52wk high/low, off-hours prices, and previous close.")
     print("Example:")
     print("  python history.py AAPL 15")
-    sys.exit(0)
 
 def fmt_price_field(info, key):
     """
@@ -26,6 +25,10 @@ def fmt_price_field(info, key):
         return f"{v:10.2f}"
     else:
         return f"{'N/A':>10}"
+
+def _is_num(v):
+    """Return True if v is a real number and not NaN."""
+    return isinstance(v, (int, float, np.floating)) and v == v
 
 def generate_klines(ticker='NVDA', step=1):
     # Fetch daily data for max period
@@ -69,12 +72,12 @@ def generate_klines(ticker='NVDA', step=1):
     # Current & change from open
     current = info.get('currentPrice', info.get('regularMarketPrice', 0))
     open_price = info.get('regularMarketOpen', 0) or 0
-    if isinstance(current, (int, float, np.floating)) and isinstance(open_price, (int, float, np.floating)) and open_price != 0:
+    if _is_num(current) and _is_num(open_price) and open_price != 0:
         pct_change = (current - open_price) / open_price * 100
     else:
         pct_change = 0
     sign = '+' if pct_change > 0 else '-'
-    current_str = f"{current:10.2f}" if isinstance(current, (int, float, np.floating)) and current == current else f"{'N/A':>10}"
+    current_str = f"{current:10.2f}" if _is_num(current) else f"{'N/A':>10}"
 
     print(f"Previous Close: {fmt_price_field(info, 'previousClose')}")
     print(f"Open: {fmt_price_field(info, 'regularMarketOpen')}")
@@ -83,12 +86,32 @@ def generate_klines(ticker='NVDA', step=1):
     print(f"Current/Regular Market Price: {current_str} ({sign}{abs(pct_change):5.2f}% from open)")
     print(f"52wk High: {fmt_price_field(info, 'fiftyTwoWeekHigh')}")
     print(f"52wk Low: {fmt_price_field(info, 'fiftyTwoWeekLow')}")
-    print(f"Pre-Market Price: {fmt_price_field(info, 'preMarketPrice')}")
-    print(f"After-Market Price: {fmt_price_field(info, 'postMarketPrice')}")
+
+    previous_close = info.get('previousClose')
+    regular_market_price = info.get('regularMarketPrice')
+
+    # Pre-Market Price
+    pre_market_price = info.get('preMarketPrice')
+    pre_market_str = fmt_price_field(info, 'preMarketPrice')
+    if _is_num(pre_market_price) and _is_num(previous_close) and previous_close != 0:
+        pre_market_pct = (pre_market_price - previous_close) / previous_close * 100
+        sign = '+' if pre_market_pct >= 0 else '-'
+        pre_market_str = f"{pre_market_str} ({sign}{abs(pre_market_pct):.2f}%)"
+    print(f"Pre-Market Price: {pre_market_str}")
+
+    # After-Market Price
+    post_market_price = info.get('postMarketPrice')
+    post_market_str = fmt_price_field(info, 'postMarketPrice')
+    if _is_num(post_market_price) and _is_num(regular_market_price) and regular_market_price != 0:
+        post_market_pct = (post_market_price - regular_market_price) / regular_market_price * 100
+        sign = '+' if post_market_pct >= 0 else '-'
+        post_market_str = f"{post_market_str} ({sign}{abs(post_market_pct):.2f}%)"
+    print(f"After-Market Price: {post_market_str}")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
         show_help()
+        sys.exit(0)
     ticker = sys.argv[1] if len(sys.argv) > 1 else 'NVDA'
     step = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     generate_klines(ticker, step)
