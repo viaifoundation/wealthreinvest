@@ -9,7 +9,7 @@ def show_help():
     print("Usage: python history.py [TICKER] [STEP]")
     print("  - TICKER: Stock ticker symbol (default: NVDA)")
     print("  - STEP: Interval in days for K-lines (default: 1)")
-    print("Description: Generates text-based K-lines (candlesticks) for the specified interval over historical data (limited to last 11 bars).")
+    print("Description: Generates text-based K-lines (candlesticks) for the specified interval over historical data (limited to last 21 lines).")
     print("Also prints current data including open, high, low, 52wk high/low, off-hours prices, and previous close.")
     print("Example:")
     print("  python history.py AAPL 15")
@@ -44,10 +44,10 @@ def generate_klines(ticker='NVDA', step=1):
         'Close': 'last'
     }).dropna()
     
-    # Limit to last 11 bars
-    resampled = resampled.tail(11)
+    # Limit to last 21 lines
+    resampled = resampled.tail(21)
     
-    print(f"\n{ticker} K-lines for {step}-day intervals (last 11 bars):")
+    print(f"\n{ticker} K-lines for {step}-day intervals (last 21 lines):")
     for idx, row in resampled.iterrows():
         dt = idx.strftime("%Y-%m-%d")
         low = row['Low']
@@ -58,7 +58,7 @@ def generate_klines(ticker='NVDA', step=1):
         sign = '+' if pct_change > 0 else '-'
         direction = '↑' if end > start else '↓'
         body = f"[{start:10.2f} {direction} {end:10.2f}] ({sign}{abs(pct_change):5.2f}%)"
-        print(f"{dt}: {low:10.2f} | {body} | {high:10.2f}")
+        print(f"{dt}: {low:10.2f}L | {body} | {high:10.2f}H")
     
     # Additional current data with current date/time
     now_pt = datetime.datetime.now(pytz.timezone('US/Pacific')).strftime("%Y-%m-%d %H:%M PT")
@@ -78,8 +78,8 @@ def generate_klines(ticker='NVDA', step=1):
 
     print(f"Previous Close: {fmt_price_field(info, 'previousClose')}")
     print(f"Open: {fmt_price_field(info, 'regularMarketOpen')}")
-    print(f"High: {fmt_price_field(info, 'regularMarketDayHigh')}")
-    print(f"Low: {fmt_price_field(info, 'regularMarketDayLow')}")
+    print(f"High: {fmt_price_field(info, 'regularMarketDayHigh')}H")
+    print(f"Low: {fmt_price_field(info, 'regularMarketDayLow')}L")
     print(f"Current/Regular Market Price: {current_str} ({sign}{abs(pct_change):5.2f}% from open)")
     print(f"52wk High: {fmt_price_field(info, 'fiftyTwoWeekHigh')}")
     print(f"52wk Low: {fmt_price_field(info, 'fiftyTwoWeekLow')}")

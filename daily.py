@@ -8,7 +8,7 @@ import yfinance as yf
 def show_help():
     print("Usage: python daily.py [TICKER] [STEP] [START_TIME]")
     print("  - TICKER: Stock ticker symbol (default: NVDA)")
-    print("  - STEP: Interval in minutes for K-lines (default: 5)")
+    print("  - STEP: Interval in minutes for K-lines (default: 15)")
     print("  - START_TIME: Start time of the day in hhmm format (default: 0930 for market open)")
     print("Description: Generates text-based K-lines (candlesticks) for the specified interval from start time to now.")
     print("Also prints current data including open, high, low, 52wk high/low, off-hours prices, and previous close.")
@@ -27,7 +27,7 @@ def fmt_price_field(info, key):
     else:
         return f"{'N/A':>10}"
 
-def generate_klines(ticker='NVDA', step=5, start_time_str='0930'):
+def generate_klines(ticker='NVDA', step=15, start_time_str='0930'):
     # Parse start time
     try:
         start_hour = int(start_time_str[:2])
@@ -77,7 +77,7 @@ def generate_klines(ticker='NVDA', step=5, start_time_str='0930'):
         sign = '+' if pct_change > 0 else '-'
         direction = '↑' if end > start else '↓'
         body = f"[{start:10.2f} {direction} {end:10.2f}] ({sign}{abs(pct_change):5.2f}%)"
-        print(f"{dt_pt}/{dt_et}e: {low:10.2f} | {body} | {high:10.2f}")
+        print(f"{dt_pt}/{dt_et}e: {low:10.2f}L | {body} | {high:10.2f}H")
     
     # Additional current data with current date/time
     now_pt = datetime.datetime.now(pytz.timezone('US/Pacific')).strftime("%Y-%m-%d %H:%M PT")
@@ -101,8 +101,8 @@ def generate_klines(ticker='NVDA', step=5, start_time_str='0930'):
 
     print(f"Previous Close: {fmt_price_field(info, 'previousClose')}")
     print(f"Open: {fmt_price_field(info, 'regularMarketOpen')}")
-    print(f"High: {fmt_price_field(info, 'regularMarketDayHigh')}")
-    print(f"Low: {fmt_price_field(info, 'regularMarketDayLow')}")
+    print(f"High: {fmt_price_field(info, 'regularMarketDayHigh')}H")
+    print(f"Low: {fmt_price_field(info, 'regularMarketDayLow')}L")
     print(f"Current/Regular Market Price: {current_str} ({sign}{abs(pct_change):5.2f}% from open)")
     print(f"52wk High: {fmt_price_field(info, 'fiftyTwoWeekHigh')}")
     print(f"52wk Low: {fmt_price_field(info, 'fiftyTwoWeekLow')}")
@@ -113,6 +113,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
         show_help()
     ticker = sys.argv[1] if len(sys.argv) > 1 else 'NVDA'
-    step = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    step = int(sys.argv[2]) if len(sys.argv) > 2 else 15
     start_time_str = sys.argv[3] if len(sys.argv) > 3 else '0930'
     generate_klines(ticker, step, start_time_str)
