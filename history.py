@@ -1,18 +1,14 @@
 import datetime
 import sys
+import argparse
 import numpy as np
 import pytz
 
 import yfinance as yf
 
 def show_help():
-    print("Usage: python history.py [TICKER] [STEP]")
-    print("  - TICKER: Stock ticker symbol (default: NVDA)")
-    print("  - STEP: Interval in days for K-lines (default: 1)")
-    print("Description: Generates text-based K-lines (candlesticks) for the specified interval over historical data (limited to last 21 lines).")
-    print("Also prints current data including open, high, low, 52wk high/low, off-hours prices, and previous close.")
-    print("Example:")
-    print("  python history.py AAPL 15")
+    # This function is now handled by argparse, but kept for reference or if needed elsewhere.
+    pass
 
 def fmt_price_field(info, key):
     """
@@ -30,7 +26,7 @@ def _is_num(v):
     """Return True if v is a real number and not NaN."""
     return isinstance(v, (int, float, np.floating)) and v == v
 
-def generate_klines(ticker='NVDA', step=1):
+def generate_klines(ticker, step):
     # Fetch daily data for max period
     stock = yf.Ticker(ticker)
     hist = stock.history(period="max", interval="1d")
@@ -109,9 +105,23 @@ def generate_klines(ticker='NVDA', step=1):
     print(f"After-Market Price: {post_market_str}")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
-        show_help()
-        sys.exit(0)
-    ticker = sys.argv[1] if len(sys.argv) > 1 else 'NVDA'
-    step = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-    generate_klines(ticker, step)
+    parser = argparse.ArgumentParser(
+        description='Generates historical text-based K-lines (candlesticks).',
+        epilog='Example: python history.py AAPL --step 5'
+    )
+    parser.add_argument('ticker', nargs='?', default='NVDA',
+                        help='Stock ticker symbol (positional, default: NVDA)')
+    parser.add_argument('-t', '--ticker_named', dest='ticker_k',
+                        help='Stock ticker symbol (named)')
+    parser.add_argument('-s', '--step', type=int, default=1,
+                        help='Interval in days for K-lines (default: 1)')
+    # Kept for positional argument compatibility
+    parser.add_argument('ignored_step', nargs='?', help=argparse.SUPPRESS)
+
+    args = parser.parse_args()
+
+    ticker = args.ticker_k or args.ticker
+    # Allow step to be provided as a 2nd positional argument
+    step = args.step if args.ignored_step is None else int(args.ignored_step)
+
+    generate_klines(ticker=ticker, step=step)

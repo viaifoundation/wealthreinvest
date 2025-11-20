@@ -1,20 +1,15 @@
 import datetime
 import sys
+import argparse
+import pandas as pd
 import numpy as np
 import pytz
 
 import yfinance as yf
 
 def show_help():
-    print("Usage: python daily.py [TICKER] [STEP] [START_TIME] [DATE]")
-    print("  - TICKER: Stock ticker symbol (default: NVDA)")
-    print("  - STEP: Interval in minutes for K-lines (default: 15)")
-    print("  - START_TIME: Start time of the day in hhmm format (default: 0930 for market open)")
-    print("  - DATE: The date to fetch data for in yyyymmdd format (default: today)")
-    print("Description: Generates text-based K-lines (candlesticks) for the specified interval from start time to the end of the market day.")
-    print("Also prints current data including open, high, low, 52wk high/low, off-hours prices, and previous close.")
-    print("Example:")
-    print("  python daily.py AAPL 15 1000")
+    # This function is now handled by argparse, but kept for reference or if needed elsewhere.
+    pass
 
 def fmt_price_field(info, key):
     """
@@ -31,69 +26,80 @@ def _is_num(v):
     """Return True if v is a real number and not NaN."""
     return isinstance(v, (int, float, np.floating)) and v == v
 
-def generate_klines(ticker='NVDA', step=15, start_time_str='0930', date_str=None):
-    # Parse start time
-    try:
-        start_hour = int(start_time_str[:2])
-        start_min = int(start_time_str[2:])
-        start_time = datetime.time(start_hour, start_min)
-    except ValueError:
-        print("Invalid START_TIME format. Use hhmm (e.g., 0930).")
-        show_help()
-        sys.exit(1)
-
+def generate_klines(ticker, step, date_str):
     # Parse date
     if date_str:
         try:
             target_date = datetime.datetime.strptime(date_str, '%Y%m%d').date()
         except ValueError:
             print("Invalid DATE format. Use yyyymmdd (e.g., 20231027).")
-            show_help()
+            # Argparse will show help on error.
             sys.exit(1)
     else:
         target_date = datetime.date.today()
 
-    # Fetch 1-minute data for the target day
+    # Fetch hourly data for the target day, including pre and post market
     stock = yf.Ticker(ticker)
     start_fetch_date = target_date
     end_fetch_date = target_date + datetime.timedelta(days=1)
-    hist = stock.history(start=start_fetch_date, end=end_fetch_date, interval="1m")
+    # Fetch 1-minute data to allow for resampling at custom 'step' intervals
+    hist = stock.history(start=start_fetch_date, end=end_fetch_date, interval="1m", prepost=True)
 
     if hist.empty:
         print(f"No data available for {ticker} on {target_date.strftime('%Y-%m-%d')}.")
         return
 
-    # Filter from start time onwards for that day
-    start_datetime_local = datetime.datetime.combine(target_date, start_time)
-    hist = hist[hist.index.time >= start_datetime_local.time()]
+    # Define market session times in US/Eastern
+    et = pytz.timezone('US/Eastern')
+    pre_market_start = datetime.time(4, 0)
+    market_start = datetime.time(9, 30)
+    market_end = datetime.time(16, 0)
+    post_market_end = datetime.time(20, 0)
 
-    if hist.empty:
-        print("No data from specified start time.")
-        return
-    
-    # Resample into step-minute K-lines
-    resampled = hist.resample(f'{step}min').agg({
-        'Open': 'first',
-        'High': 'max',
-        'Low': 'min',
-        'Close': 'last'
-    }).dropna()
-    
-    display_date_str = target_date.strftime("%Y-%m-%d")
-    print(f"\n{ticker} K-lines for {step}-minute intervals on {display_date_str} (from {start_time_str}):")
-    for idx, row in resampled.iterrows():
-        idx_pt = idx.astimezone(pytz.timezone('US/Pacific'))
-        dt_pt = idx_pt.strftime("%H:%M")
-        dt_et = idx.astimezone(pytz.timezone('US/Eastern')).strftime("%H:%M")
+    # Ensure index is in Eastern Time for filtering
+    hist.index = hist.index.tz_convert(et)
+
+    # Filter data into sessions
+    pre_market_data = hist[(hist.index.time >= pre_market_start) & (hist.index.time < market_start)]
+    regular_market_data = hist[(hist.index.time >= market_start) & (hist.index.time < market_end)]
+    post_market_data = hist[(hist.index.time >= market_end) & (hist.index.time < post_market_end)]
+
+    # Helper to print K-lines for a session
+    def print_session_klines(session_name, data):
+        if data.empty:
+            return
+
+        resampled = data.resample(f'{step}min').agg({
+            'Open': 'first',
+            'High': 'max',
+            'Low': 'min',
+            'Close': 'last'
+        }).dropna()
+
+        if resampled.empty:
+            return
+
+        print(f"\n--- {session_name} ({step}-Minute) ---")
+        for idx, row in resampled.iterrows():
+            dt_et = idx.strftime("%H:%M")
+            dt_pt = idx.astimezone(pytz.timezone('US/Pacific')).strftime("%H:%M")
+            print_kline_row(dt_pt, dt_et, row)
+
+    def print_kline_row(dt_pt, dt_et, row):
         low = row['Low']
         high = row['High']
         start = row['Open']
         end = row['Close']
         pct_change = ((end - start) / start * 100) if start != 0 else 0
-        sign = '+' if pct_change > 0 else '-'
+        sign = '+' if pct_change >= 0 else '-'
         direction = '↑' if end > start else '↓'
         body = f"[{start:10.2f} {direction} {end:10.2f}] ({sign}{abs(pct_change):5.2f}%)"
         print(f"{dt_pt}/{dt_et}e: {low:10.2f}L | {body} | {high:10.2f}H")
+
+    print(f"\n{ticker} Hourly K-lines for {target_date.strftime('%Y-%m-%d')}")
+    print_session_klines("Pre-Market", pre_market_data)
+    print_session_klines("Regular Market", regular_market_data)
+    print_session_klines("After-Hours", post_market_data)
     
     # Additional current data with current date/time
     now_pt = datetime.datetime.now(pytz.timezone('US/Pacific')).strftime("%Y-%m-%d %H:%M PT")
@@ -142,11 +148,27 @@ def generate_klines(ticker='NVDA', step=15, start_time_str='0930', date_str=None
     print(f"After-Market Price: {post_market_str}")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
-        show_help()
-        sys.exit(0)
-    ticker = sys.argv[1] if len(sys.argv) > 1 else 'NVDA'
-    step = int(sys.argv[2]) if len(sys.argv) > 2 else 15
-    start_time_str = sys.argv[3] if len(sys.argv) > 3 else '0930'
-    date_str = sys.argv[4] if len(sys.argv) > 4 else None
-    generate_klines(ticker, step, start_time_str, date_str)
+    parser = argparse.ArgumentParser(
+        description='Generates text-based K-lines for pre-market, regular, and after-hours sessions for a given day.',
+        epilog='Example: python daily.py AAPL -s 5 -d 20231027'
+    )
+    parser.add_argument('ticker', nargs='?', default='NVDA',
+                        help='Stock ticker symbol (positional, default: NVDA)')
+    parser.add_argument('-t', '--ticker_named', dest='ticker_k',
+                        help='Stock ticker symbol (named)')
+    parser.add_argument('-s', '--step', type=int, default=15,
+                        help='Interval in minutes for K-lines (default: 15)')
+    parser.add_argument('-d', '--date',
+                        help='The date to fetch data for in yyyymmdd format (default: today)')
+    # Kept for positional argument compatibility, but ignored.
+    parser.add_argument('ignored_start_time', nargs='?', help=argparse.SUPPRESS)
+    parser.add_argument('ignored_date', nargs='?', help=argparse.SUPPRESS)
+
+    args = parser.parse_args()
+
+    ticker = args.ticker_k or args.ticker
+    step = args.step
+    # Allow date to be provided as a 4th positional argument for backward compatibility
+    date_str = args.date or args.ignored_date
+
+    generate_klines(ticker=ticker, step=step, date_str=date_str)
