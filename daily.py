@@ -7,6 +7,8 @@ import pytz
 
 import yfinance as yf
 
+from _version import __version__
+
 def show_help():
     # This function is now handled by argparse, but kept for reference or if needed elsewhere.
     pass
@@ -152,6 +154,8 @@ if __name__ == "__main__":
         description='Generates text-based K-lines for pre-market, regular, and after-hours sessions for a given day.',
         epilog='Example: python daily.py AAPL -s 5 -d 20231027'
     )
+    parser.add_argument('-v', '--version', action='version',
+                        version=f'%(prog)s v{__version__}')
     parser.add_argument('ticker', nargs='?', default='NVDA',
                         help='Stock ticker symbol (positional, default: NVDA)')
     parser.add_argument('-t', '--ticker_named', dest='ticker_k',

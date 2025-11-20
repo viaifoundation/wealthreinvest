@@ -6,6 +6,8 @@ import pytz
 
 import yfinance as yf
 
+from _version import __version__
+
 def show_help():
     # This function is now handled by argparse, but kept for reference or if needed elsewhere.
     pass
@@ -109,6 +111,8 @@ if __name__ == "__main__":
         description='Generates historical text-based K-lines (candlesticks).',
         epilog='Example: python history.py AAPL --step 5'
     )
+    parser.add_argument('-v', '--version', action='version',
+                        version=f'%(prog)s v{__version__}')
     parser.add_argument('ticker', nargs='?', default='NVDA',
                         help='Stock ticker symbol (positional, default: NVDA)')
     parser.add_argument('-t', '--ticker_named', dest='ticker_k',
