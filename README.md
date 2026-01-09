@@ -32,7 +32,7 @@ This repository contains scripts to fetch current stock price data (including of
 - **Smart extended hours display**: Automatically shows/hides extended trading hours (pre-market and after-hours) data based on current time, or manually control with `--extended-hours` flag.
 - Generate historical K-lines over days (last 11 bars).
 - Customizable via command-line parameters (ticker, step interval, start time).
-- Help function for usage (--help or -h) in all scripts.
+- Help function for usage (--help, -h, or -?) in all scripts.
 
 ## Requirements
 - Python 3.10 or higher
@@ -208,9 +208,13 @@ python daily.py AAPL -s 5
 python daily.py AAPL -s 15 -d 20231027
 
 # Force show extended trading hours (pre-market and after-hours) data
+python daily.py AAPL -e
+# or
 python daily.py AAPL --extended-hours
 
 # Force hide extended trading hours data (regular market only)
+python daily.py AAPL -e false
+# or
 python daily.py AAPL --extended-hours false
 ```
 
@@ -227,18 +231,22 @@ python history.py TSLA --step 7
 **Get help:**
 ```bash
 python price.py --help
+python price.py -h
+python price.py '-?'  # Note: -? must be quoted in shells (zsh/bash)
 python daily.py -h
+python daily.py '-?'  # Note: -? must be quoted in shells (zsh/bash)
 python history.py --help
+python history.py '-?'  # Note: -? must be quoted in shells (zsh/bash)
 ```
 
 ### Command-Line Options
 
-All scripts support `--help` or `-h` for detailed usage information. The `daily.py` and `history.py` scripts also support `--version` or `-v` to display the version number.
+All scripts support `--help`, `-h`, or `-?` for detailed usage information. Note: When using `-?`, you must quote it in shells (e.g., `python daily.py '-?'`) because `?` is a special character in zsh/bash. The `daily.py` and `history.py` scripts also support `--version` or `-v` to display the version number.
 
 **daily.py specific options:**
-- `--extended-hours`: Control extended trading hours (pre-market and after-hours) display
-  - `--extended-hours` or `--extended-hours true`: Force show extended trading hours K-lines
-  - `--extended-hours false`: Force hide extended trading hours K-lines (show regular market only)
+- `-e` / `--extended-hours`: Control extended trading hours (pre-market and after-hours) display
+  - `-e` / `--extended-hours` or `-e true` / `--extended-hours true`: Force show extended trading hours K-lines
+  - `-e false` / `--extended-hours false`: Force hide extended trading hours K-lines (show regular market only)
   - Omit flag: Auto-detect based on current time (default)
 - **Default behavior** (when `--extended-hours` is omitted): Automatically detects current time and shows/hides extended hours accordingly:
   - **During extended hours** (pre-market 4:00-9:30 ET, after-hours 16:00-20:00 ET, or market closed): Shows extended trading hours by default

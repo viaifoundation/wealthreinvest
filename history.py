@@ -8,6 +8,15 @@ import yfinance as yf
 
 from _version import __version__
 
+class CustomHelpFormatter(argparse.HelpFormatter):
+    def _format_action_invocation(self, action):
+        if not action.option_strings:
+            return super()._format_action_invocation(action)
+        # Show -h, --help, -? combined for help action
+        if getattr(action, 'action', None) == 'help':
+            return '-h, --help, -?'
+        return ', '.join(action.option_strings)
+
 def show_help():
     # This function is now handled by argparse, but kept for reference or if needed elsewhere.
     pass
@@ -107,16 +116,25 @@ def generate_klines(ticker, step):
     print(f"After-Market Price: {post_market_str}")
 
 if __name__ == "__main__":
+    # Pre-process sys.argv to replace -? with --help
+    for i, arg in enumerate(sys.argv):
+        if arg == '-?':
+            sys.argv[i] = '--help'
+    
     parser = argparse.ArgumentParser(
         description='Generates historical text-based K-lines (candlesticks).',
-        epilog='Example: python history.py AAPL --step 5'
+        epilog='Example: python history.py AAPL --step 5',
+        formatter_class=CustomHelpFormatter,
+        add_help=False  # We'll add custom help that includes -?
     )
+    parser.add_argument('-h', '--help', action='help',
+                        help='Show this help message and exit')
     parser.add_argument('-v', '--version', action='version',
                         version=f'%(prog)s v{__version__}')
     parser.add_argument('ticker', nargs='?', default='NVDA',
                         help='Stock ticker symbol (positional, default: NVDA)')
-    parser.add_argument('-t', '--ticker_named', dest='ticker_k',
-                        help='Stock ticker symbol (named)')
+    parser.add_argument('-t', '--ticker', dest='ticker_k',
+                        help='Stock ticker symbol (alternative to positional argument)')
     parser.add_argument('-s', '--step', type=int, default=1,
                         help='Interval in days for K-lines (default: 1)')
     # Kept for positional argument compatibility

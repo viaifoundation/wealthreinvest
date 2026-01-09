@@ -9,6 +9,15 @@ import yfinance as yf
 
 from _version import __version__
 
+class CustomHelpFormatter(argparse.HelpFormatter):
+    def _format_action_invocation(self, action):
+        if not action.option_strings:
+            return super()._format_action_invocation(action)
+        # Show -h, --help, -? combined for help action
+        if getattr(action, 'action', None) == 'help':
+            return '-h, --help, -?'
+        return ', '.join(action.option_strings)
+
 def show_help():
     # This function is now handled by argparse, but kept for reference or if needed elsewhere.
     pass
@@ -210,22 +219,31 @@ def generate_klines(ticker, step, date_str, show_extended_hours=None):
     print(f"After-Market Price: {post_market_str}")
 
 if __name__ == "__main__":
+    # Pre-process sys.argv to replace -? with --help
+    for i, arg in enumerate(sys.argv):
+        if arg == '-?':
+            sys.argv[i] = '--help'
+    
     parser = argparse.ArgumentParser(
         description='Generates text-based K-lines for pre-market, regular, and after-hours sessions for a given day.',
-        epilog='Example: python daily.py AAPL -s 5 -d 20231027'
+        epilog='Example: python daily.py AAPL -s 5 -d 20231027',
+        formatter_class=CustomHelpFormatter,
+        add_help=False  # We'll add custom help that includes -?
     )
+    parser.add_argument('-h', '--help', action='help',
+                        help='Show this help message and exit')
     parser.add_argument('-v', '--version', action='version',
                         version=f'%(prog)s v{__version__}')
     parser.add_argument('ticker', nargs='?', default='NVDA',
                         help='Stock ticker symbol (positional, default: NVDA)')
-    parser.add_argument('-t', '--ticker_named', dest='ticker_k',
-                        help='Stock ticker symbol (named)')
+    parser.add_argument('-t', '--ticker', dest='ticker_k',
+                        help='Stock ticker symbol (alternative to positional argument)')
     parser.add_argument('-s', '--step', type=int, default=15,
                         help='Interval in minutes for K-lines (default: 15)')
     parser.add_argument('-d', '--date',
                         help='The date to fetch data for in yyyymmdd format (default: today)')
-    parser.add_argument('--extended-hours', dest='show_extended_hours', type=str_to_bool, default=None, nargs='?', const=True,
-                        help='Control extended trading hours (pre-market and after-hours) display: --extended-hours or --extended-hours true (show), --extended-hours false (hide), omit for auto-detect (default: auto-detect based on current time)')
+    parser.add_argument('-e', '--extended-hours', dest='show_extended_hours', type=str_to_bool, default=None, nargs='?', const=True,
+                        help='Control extended trading hours (pre-market and after-hours) display: -e/--extended-hours or -e/--extended-hours true (show), -e/--extended-hours false (hide), omit for auto-detect (default: auto-detect based on current time)')
     # Kept for positional argument compatibility, but ignored.
     parser.add_argument('ignored_start_time', nargs='?', help=argparse.SUPPRESS)
     parser.add_argument('ignored_date', nargs='?', help=argparse.SUPPRESS)

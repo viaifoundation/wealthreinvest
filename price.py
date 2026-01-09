@@ -146,7 +146,7 @@ def get_current_price(ticker, source='yfinance'):
         print(f"Source '{source}' not available or library not installed.")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h']:
+    if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h', '-?']:
         show_help()
     ticker = sys.argv[1] if len(sys.argv) > 1 else 'NVDA'
     source = sys.argv[2] if len(sys.argv) > 2 else 'yfinance'
