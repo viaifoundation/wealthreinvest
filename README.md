@@ -29,6 +29,7 @@ This repository contains scripts to fetch current stock price data (including of
 - Fetch current/regular market price, with pre/after-market where supported.
 - Supports multiple sources for prices: yfinance (default, no key), massive, finnhub, twelvedata.
 - Generate text-based K-lines for daily intervals (from market open to now) with time in PT/ET.
+- **Smart extended hours display**: Automatically shows/hides extended trading hours (pre-market and after-hours) data based on current time, or manually control with `--extended-hours` flag.
 - Generate historical K-lines over days (last 11 bars).
 - Customizable via command-line parameters (ticker, step interval, start time).
 - Help function for usage (--help or -h) in all scripts.
@@ -195,6 +196,9 @@ python price.py TSLA yfinance
 **Generate daily K-lines:**
 ```bash
 # Default: NVDA, 15-minute intervals, today
+# Extended hours display auto-detects based on current time:
+#   - Shows pre/after-market if currently during extended hours or market closed
+#   - Hides pre/after-market if currently during regular trading hours
 python daily.py
 
 # Custom ticker and interval
@@ -202,6 +206,12 @@ python daily.py AAPL -s 5
 
 # Specify a date (format: yyyymmdd)
 python daily.py AAPL -s 15 -d 20231027
+
+# Force show extended trading hours (pre-market and after-hours) data
+python daily.py AAPL --extended-hours
+
+# Force hide extended trading hours data (regular market only)
+python daily.py AAPL --extended-hours false
 ```
 
 **Generate historical K-lines:**
@@ -224,6 +234,15 @@ python history.py --help
 ### Command-Line Options
 
 All scripts support `--help` or `-h` for detailed usage information. The `daily.py` and `history.py` scripts also support `--version` or `-v` to display the version number.
+
+**daily.py specific options:**
+- `--extended-hours`: Control extended trading hours (pre-market and after-hours) display
+  - `--extended-hours` or `--extended-hours true`: Force show extended trading hours K-lines
+  - `--extended-hours false`: Force hide extended trading hours K-lines (show regular market only)
+  - Omit flag: Auto-detect based on current time (default)
+- **Default behavior** (when `--extended-hours` is omitted): Automatically detects current time and shows/hides extended hours accordingly:
+  - **During extended hours** (pre-market 4:00-9:30 ET, after-hours 16:00-20:00 ET, or market closed): Shows extended trading hours by default
+  - **During regular hours** (9:30-16:00 ET on weekdays): Hides extended trading hours by default
 
 ## Troubleshooting
 

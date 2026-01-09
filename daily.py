@@ -28,7 +28,57 @@ def _is_num(v):
     """Return True if v is a real number and not NaN."""
     return isinstance(v, (int, float, np.floating)) and v == v
 
-def generate_klines(ticker, step, date_str):
+def str_to_bool(value):
+    """Convert string to boolean for argparse."""
+    if isinstance(value, bool):
+        return value
+    if value.lower() in ('yes', 'true', 't', 'y', '1', 'show'):
+        return True
+    elif value.lower() in ('no', 'false', 'f', 'n', '0', 'hide'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError(f'Boolean value expected, got: {value}')
+
+def is_extended_hours():
+    """
+    Determine if current time is during extended trading hours (pre-market or after-hours).
+    Returns True if currently in pre-market (4:00-9:30 ET) or after-hours (16:00-20:00 ET),
+    or if market is closed (outside 4:00-20:00 ET).
+    Returns False if currently in regular market hours (9:30-16:00 ET).
+    """
+    et = pytz.timezone('US/Eastern')
+    now_et = datetime.datetime.now(et)
+    current_time = now_et.time()
+    
+    pre_market_start = datetime.time(4, 0)
+    market_start = datetime.time(9, 30)
+    market_end = datetime.time(16, 0)
+    post_market_end = datetime.time(20, 0)
+    
+    # Check if it's a weekday (Monday=0, Sunday=6)
+    weekday = now_et.weekday()
+    is_weekday = weekday < 5  # Monday through Friday
+    
+    if not is_weekday:
+        # Weekend - market is closed, show off-hours by default
+        return True
+    
+    # Pre-market: 4:00 - 9:30 ET
+    if pre_market_start <= current_time < market_start:
+        return True
+    
+    # Regular market: 9:30 - 16:00 ET
+    if market_start <= current_time < market_end:
+        return False
+    
+    # After-hours: 16:00 - 20:00 ET
+    if market_end <= current_time < post_market_end:
+        return True
+    
+    # Outside trading hours (before 4:00 or after 20:00 ET)
+    return True
+
+def generate_klines(ticker, step, date_str, show_extended_hours=None):
     # Parse date
     if date_str:
         try:
@@ -98,10 +148,20 @@ def generate_klines(ticker, step, date_str):
         body = f"[{start:10.2f} {direction} {end:10.2f}] ({sign}{abs(pct_change):5.2f}%)"
         print(f"{dt_pt}/{dt_et}e: {low:10.2f}L | {body} | {high:10.2f}H")
 
+    # Determine default for show_extended_hours if not specified
+    if show_extended_hours is None:
+        show_extended_hours = is_extended_hours()
+    
     print(f"\n{ticker} Hourly K-lines for {target_date.strftime('%Y-%m-%d')}")
-    print_session_klines("Pre-Market", pre_market_data)
+    
+    # Conditionally show pre-market and after-hours based on flag
+    if show_extended_hours:
+        print_session_klines("Pre-Market", pre_market_data)
+    
     print_session_klines("Regular Market", regular_market_data)
-    print_session_klines("After-Hours", post_market_data)
+    
+    if show_extended_hours:
+        print_session_klines("After-Hours", post_market_data)
     
     # Additional current data with current date/time
     now_pt = datetime.datetime.now(pytz.timezone('US/Pacific')).strftime("%Y-%m-%d %H:%M PT")
@@ -164,6 +224,8 @@ if __name__ == "__main__":
                         help='Interval in minutes for K-lines (default: 15)')
     parser.add_argument('-d', '--date',
                         help='The date to fetch data for in yyyymmdd format (default: today)')
+    parser.add_argument('--extended-hours', dest='show_extended_hours', type=str_to_bool, default=None, nargs='?', const=True,
+                        help='Control extended trading hours (pre-market and after-hours) display: --extended-hours or --extended-hours true (show), --extended-hours false (hide), omit for auto-detect (default: auto-detect based on current time)')
     # Kept for positional argument compatibility, but ignored.
     parser.add_argument('ignored_start_time', nargs='?', help=argparse.SUPPRESS)
     parser.add_argument('ignored_date', nargs='?', help=argparse.SUPPRESS)
@@ -174,5 +236,6 @@ if __name__ == "__main__":
     step = args.step
     # Allow date to be provided as a 4th positional argument for backward compatibility
     date_str = args.date or args.ignored_date
+    show_extended_hours = args.show_extended_hours
 
-    generate_klines(ticker=ticker, step=step, date_str=date_str)
+    generate_klines(ticker=ticker, step=step, date_str=date_str, show_extended_hours=show_extended_hours)
