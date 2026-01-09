@@ -1,9 +1,11 @@
-massive  # For Massive (optional)
-finnhub-python  # For Finnhub (optional)
-twelvedata  # For Twelve Data (optional)
-yfinance  # Default, free
-massive  # For Massive (optional)
-finnhub-python  # For Finnhub (optional)
-twelvedata  # For Twelve Data (optional)
+# Core dependencies
 yfinance  # Default, free
 numpy
+pandas
+pytz
+requests
+
+# Optional API providers (install only if needed)
+# massive  # For Massive API (requires MASSIVE_API_KEY)
+# finnhub-python  # For Finnhub API (requires FINNHUB_API_KEY)
+# twelvedata  # For Twelve Data API (requires TWELVEDATA_API_KEY)
